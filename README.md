@@ -17,4 +17,4 @@ Start play application
 
 Access dailymeetic
 
-    (https://github.com/kitchenware/master-chef/tree/master/tests/json)
+    http://localhost:9000
