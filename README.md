@@ -3,7 +3,7 @@ Daily Meetic
 
 A daily meeting tool for distributed teams.
 
-This project was done in a one-week hackathon, hence the lack of automated tests.
+This project was done in a one-week hackathon, hence the lack of automated tests. It uses Play 2 Scala, jQuery, SemanticUI
 
 <<<<<<< HEAD
 # How to start?
@@ -19,6 +19,3 @@ Start play application
 Access dailymeetic
 
     (https://github.com/kitchenware/master-chef/tree/master/tests/json)
-=======
-This project uses Play 2 Scala, jQuery, SemanticUI
->>>>>>> 61e8d9c576b366c7f419e0299a3df4e5e39767c2
