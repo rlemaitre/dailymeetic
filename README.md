@@ -5,7 +5,6 @@ A daily meeting tool for distributed teams.
 
 This project was done in a one-week hackathon, hence the lack of automated tests. It uses Play 2 Scala, jQuery, SemanticUI
 
-<<<<<<< HEAD
 # How to start?
 
 Clone dailymeetic :
