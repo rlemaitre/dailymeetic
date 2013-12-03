@@ -1,2 +1,4 @@
 
 *.iml
+
+target/scala-2.10/src_managed/main/views/html/teams/settings.template.scala
