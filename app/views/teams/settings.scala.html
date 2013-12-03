@@ -1,0 +1,46 @@
+@(teams: Seq[Team], user: User, team: Team, form:Form[String], nbMeeting: Int = 20)
+
+@import commons.DateHelper._
+
+@url(teamName: String, dateStr:String) = @{
+    if (team.steering) routes.Meetings.steering(team.name, dateStr) else routes.Meetings.details(team.name, dateStr)
+}
+@main(teams, user) {
+    <div class="ui one column page grid">
+        <div class="column">
+            <div class="ui segment">
+                <div class="ui blue ribbon label"><i class="users icon"></i>@team.name</div>
+                <div class="ui items">
+                    <div class="ui small images">
+                    @team.members.map { member => <img src="@routes.Assets.at("images/avatar" + member.login + ".jpg")" class="circular ui image" alt="@member.completeName" title="@member.completeName">}
+                    </div>
+                </div>
+            </div>
+            @if(form.hasErrors) {
+                <div class="ui error message">
+                    <div class="header">Error</div>
+                    <p>Please fix all errors</p>
+                </div>
+            }
+
+            <div class="ui segment form">
+            @helper.form(action = routes.Teams.changeSettings(team.name)) {
+                <div class="ui header">Scrum Master</div>
+                <div class="grouped inline fields">
+                @team.members.map { member =>
+                    <div class="field">
+                        <div class="ui radio checkbox">
+                            <input id="scrummaster_@member.login" type="radio" name="scrumMaster" value="@member.login" @if(team.scrumMaster.isDefined && team.scrumMaster.get == member.login) {checked="checked"}>
+                            <label for="scrummaster_@member.login"></label>
+                        </div>
+                        <label for="scrummaster_@member.login"><img class="ui avatar image" src="@routes.Assets.at("images/avatar/" + member.login + ".jpg")" title="@member.completeName">@member.completeName</label>
+                    </div>
+                }
+                <div class="actions">
+                    <input type="submit" value="Saves changes" class="ui blue right submit button"/>
+                </div>
+            }
+            </div>
+        </div>
+    </div>
+}

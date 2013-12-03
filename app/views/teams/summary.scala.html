@@ -1,0 +1,57 @@
+@(team:Team, myTeam:Boolean = false)
+
+@import commons.DateHelper._
+
+    @url(teamName: String, dateStr:String) = @{
+        if (team.steering) routes.Meetings.steering(team.name, dateStr) else routes.Meetings.details(team.name, dateStr)
+    }
+
+<div class="column teamsummary">
+    <div class="ui segment">
+        <a class="ui right red corner label" href="@routes.Teams.details(team.name)">
+            <i class="search icon" title="Details"></i>
+        </a>
+        <div class="ui blue ribbon label"><i class="users icon"></i>@team.name</div>
+        <div class="ui items">
+            <div class="ui small images">
+            @team.members.map { member => <img src="@routes.Assets.at("images/avatar/" + member.login + ".jpg")" class="circular ui image" alt="@member.completeName" title="@member.completeName">}
+            </div>
+        </div>
+        <div class="ui selection list">
+            @if(myTeam) {
+            @if(myTeam && !team.todayMeeting.isDefined) {
+                <div class="item">
+                    <a class="right floated red tiny ui button" href="@url(team.name, forUrl(today))">Create</a>
+                    <div class="content">
+                        <i class="large icon"></i>
+                        @readableDate(today)
+                    </div>
+                </div>
+            } else {
+                @if(myTeam && !team.tomorrowMeeting.isDefined) {
+                    <div class="item">
+                        <a class="right floated red tiny ui button" href="@url(team.name, forUrl(nextDay))">Create</a>
+                        <div class="content">
+                            <i class="large icon"></i>
+                            @readableDate(nextDay)
+                        </div>
+                    </div>
+                }
+            }
+            }
+        @team.lastMeetings().map { meeting =>
+            <div class="item">
+                <a class="right floated tiny ui button" href="@url(team.name, forUrl(meeting.date))">View</a>
+                <div class="content">
+                    @meeting.problem match {
+                        case Some(true) => {<i class="large red thumbs down outline icon"></i>}
+                        case Some(false) => {<i class="large teal thumbs up outline icon"></i>}
+                        case _ => {<i class="large icon"></i>}
+                    }
+                    @readableDate(meeting.date)
+                </div>
+            </div>
+        }
+        </div>
+    </div>
+</div>

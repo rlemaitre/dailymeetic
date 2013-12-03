@@ -1,0 +1,131 @@
+@(teams: Seq[Team], user: User, meeting: Meeting)(implicit r: RequestHeader)
+
+@import commons.DateHelper._
+
+    @suffix(groupName: String, item: MeetingItem) = @{ groupName + "_" + item.id.get }
+    @canEdit = @{ meeting.participants.contains(user) }
+
+@main(teams, user) {
+    <div class="ui blue segment">
+        <div class="ui huge blue ribbon label">@meeting.teamName - @readableDate(meeting.date)</div>
+        <div class="ui items">
+            <div class="ui small images" id="participants">
+            </div>
+        </div>
+        @if(canEdit) {
+        <div class="ui basic accordion" id="addParticipantButton">
+            <div class="title">
+                <i class="icon dropdown"></i>
+                Add participants
+            </div>
+            <div class="ui two column floating grid content" id="addParticipants">
+            </div>
+        </div>
+        }
+    </div>
+    <div class="ui blue segment">
+        <div class="ui huge ribbon label">
+            @if(meeting.problem.getOrElse(false)) {
+                <i class="floating ui large red thumbs down outline icon @if(canEdit) {problemToggle}" id="problemToggle_@meeting.teamName"></i>
+            } else {
+                <i class="floating ui large blue thumbs up outline icon  @if(canEdit) {problemToggle}" id="problemToggle_@meeting.teamName"></i>
+            }
+            Today
+        </div>
+        <div class="ui right floated header">
+            <div class="ui compact menu">
+                <div class="ui simple teal dropdown item">
+                    Tools<i class="dropdown icon"></i>
+                    <div class="menu">
+                        <a class="item" id="skype">Launch Skype call</a>
+                        <a class="item" href="@routes.Meetings.detailsConfluence(meeting.team.name, forUrl(meeting.date))">Export to Confluence</a>
+                        <a class="item" href="@routes.Meetings.detailsTxt(meeting.team.name, forUrl(meeting.date))">Export to Skype</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <table class="ui padded table" id="messages_@meeting.teamName">
+            <tbody>
+            @for(item <- meeting.itemsByGroup.get(meeting.teamName).getOrElse(Seq())) {
+                <tr id="item_@suffix(meeting.teamName, item)">
+                    <td class="one wide">
+                        @if(item.bug) {
+                            <i id="bug_@suffix(meeting.teamName, item)" class="large teal bug icon @if(canEdit) {bugToggle}" title="Bug"></i>
+                        } else {
+                            <i id="bug_@suffix(meeting.teamName, item)" class="large disabled teal bug icon @if(canEdit) {bugToggle}"></i>
+                        }
+                        @if(item.impediment) {
+                            <i id="impediment_@suffix(meeting.teamName, item)" class="large red exclamation icon @if(canEdit) {impedimentToggle}" title="Impediment"></i>
+                        } else {
+                            <i id="impediment_@suffix(meeting.teamName, item)" class="large disabled red exclamation icon @if(canEdit) {impedimentToggle}"></i>
+                        }
+                    </td>
+                    <td class="one wide">
+                        <span class="ui  @if(canEdit) {editable jiraIssue} red horizontal label field" id="jiraIssue_@suffix(meeting.teamName, item)">@Html(item.jiraIssue.getOrElse(""))</span>
+                    </td>
+                    <td class="thirteen wide">
+                        <div class="@if(canEdit) {editable itemContent} field" id="content_@suffix(meeting.teamName, item)">@Html(item.content.getOrElse("").replace("\n", "<br/>"))</div>
+                    </td>
+                    @if(canEdit) {
+                    <td class="one wide">
+                        <a class="right floated removeItemButton" id="removeItemButton_@suffix(meeting.teamName, item)">
+                            <i class="large red remove sign icon" title="Remove"></i>
+                        </a>
+                    </td>
+                    }
+                </tr>
+            }
+            </tbody>
+        </table>
+        @if(canEdit) {
+        <div class="item">
+            <a id="addItemButton_@meeting.teamName" class="right floated red tiny ui button addItemButton">Add</a>
+        </div>
+        }
+    </div>
+    @meeting.previousMeeting match {
+        case Some(m) => {
+            <div class="ui blue segment">
+                <div class="ui huge ribbon label">
+                    @if(m.problem.getOrElse(false)) {
+                        <i class="floating ui large red thumbs down bolt outline icon problemToggle" id="problemToggle_@meeting.teamName"></i>
+                    } else {
+                        <i class="floating ui large blue thumbs up outline icon problemToggle" id="problemToggle_@meeting.teamName"></i>
+                    }
+                    Yesterday
+                </div>
+                <table class="ui padded table">
+                    <tbody>
+                    @for(item <- m.items) {
+                        <tr>
+                            <td class="one wide">
+                                @if(item.bug) {
+                                    <i class="large teal bug icon" title="Bug"></i>
+                                } else {
+                                    <i class="large disabled teal bug icon"></i>
+                                }
+                                @if(item.impediment) {
+                                    <i class="large red exclamation icon" title="Impediment"></i>
+                                } else {
+                                    <i class="large disabled red exclamation icon"></i>
+                                }
+                            </td>
+                            <td class="one wide" valign="true">
+                                <span class="ui red horizontal label">@Html(item.jiraIssue.getOrElse(""))</span>
+                            </td>
+                            <td class="fourteen wide">
+                                <div>@Html(item.content.getOrElse("").replace("\n", "<br/>"))</div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        case None => {}
+    }
+    <script type="text/javascript" charset="utf-8" src="@routes.Assets.at("javascripts/jquery.jeditable.js")"></script>
+
+    @views.html.meetings.meetingroomjs(user.login, meeting.teamName, forUrl(meeting.date), meeting)
+}
+

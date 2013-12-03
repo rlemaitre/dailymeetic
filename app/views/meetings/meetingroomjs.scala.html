@@ -1,0 +1,494 @@
+@(username: String, team: String, date: String, meeting:Meeting)(implicit r: RequestHeader)
+
+    @canEdit = @{ meeting.participants.map(_.login)contains(username) }
+
+<script type="text/javascript">
+$(function () {
+
+    var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket;
+    var chatSocket = new WS('@routes.Meetings.meetingRoom(username, team, date).webSocketURL()');
+
+    var
+        $addItemButtons = $('.addItemButton'),
+        $onError = $('#onError'),
+        $onErrorMessage = $('#onErrorMessage'),
+        $removeItemButtons = $('.removeItemButton'),
+        $problemToggles = $('.problemToggle'),
+        $jiraIssues = $('.editable.jiraIssue'),
+        $contents = $('.editable.itemContent'),
+        $bugToggles = $('.bugToggle'),
+        $impedimentToggles = $('.impedimentToggle'),
+        $participants = $('#participants'),
+        $addParticipantButton = $('#addParticipantButton'),
+        $addParticipants = $('#addParticipants'),
+        $skype = $('#skype'),
+        $email = $('#email'),
+        handler
+        ;
+
+    var suffix = function(itemId, grouping) {
+        return grouping + '_' + itemId;
+    };
+    var getGroup =  function(elem) {
+        return elem.attr('id').split('_')[1];
+    };
+
+    var getParticipantId =  function(elem) {
+        return elem.attr('id').split('_')[1];
+    };
+
+    var getItemId =  function(elem) {
+        return elem.attr('id').split('_')[2];
+    };
+
+    var replaceNewLine =  function(value, settings) {
+        var retval = value.replace(/<br[\s\/]?>/gi, '\n');
+        return retval;
+    };
+
+    var escapeHTML = function(toEscape) {
+        return String(toEscape)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br\/>')
+        ;
+    };
+    var unescapeHTML = function(toEscape) {
+        return String(toEscape)
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/<br>/g, '\n')
+            .replace(/<br\/>/g, '\n')
+        ;
+    };
+
+    handler = {
+        communication: {
+            sendAddItemMessage: function () {
+                console.log(this);
+                var $this = $(this);
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'addItem',
+                    grouping: getGroup($this),
+                    item: {
+                        bug: false,
+                        impediment: false,
+                        grouping: getGroup($this)
+                    }
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendMinutes: function () {
+                console.log(this);
+                var $this = $(this);
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'sendMinutes',
+                    grouping: '@team'
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendSwitchParticipantMessage: function (userLogin, add) {
+                console.log(this);
+                var $this = $(this);
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'switchParticipant',
+                    user: userLogin,
+                    add: add,
+                    grouping: '@team'
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendDeleteMessage: function (id, grouping) {
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'deleteItem',
+                    id: parseInt(id, 10),
+                    grouping: grouping
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendEditContentMessage: function (id, newContent, grouping) {
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'editItemContent',
+                    id: parseInt(id, 10),
+                    grouping: grouping,
+                    content: newContent
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendEditBugMessage: function (id, newContent, grouping) {
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'editItemBug',
+                    id: parseInt(id, 10),
+                    grouping: grouping,
+                    bug: newContent
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendEditProblemMessage: function (problem, grouping) {
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'editProblem',
+                    id: @meeting.id,
+                    grouping: grouping,
+                    problem: problem
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendEditImpedimentMessage: function (id, newContent, grouping) {
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'editItemImpediment',
+                    id: parseInt(id, 10),
+                    grouping: grouping,
+                    impediment: newContent
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            sendEditJiraMessage: function (id, newContent, grouping) {
+                var data = JSON.stringify({
+                    team: '@team',
+                    date: '@date',
+                    operation: 'editItemJira',
+                    id: parseInt(id, 10),
+                    grouping: grouping,
+                    jiraIssue: newContent
+                });
+                console.log('sending ' + data);
+                chatSocket.send(data);
+            },
+            receiveEvent: function (event) {
+                console.log('received data ' + event.data);
+                var data = JSON.parse(event.data);
+                var message = data.message;
+                if (message.team !== '@team' || message.date !== '@date') {
+                    return;
+                }
+                // Handle errors
+                if (data.error) {
+                    chatSocket.close();
+                    $onErrorMessage.text(data.error);
+                    $onError.show();
+                    return
+                } else {
+                    $onError.hide();
+                }
+
+                // Create the message element
+                if (data.kind == 'item') {
+                    if (message.operation == 'addItem') {
+                        handler.messageList.addMessage(message.item, message.grouping);
+                    } else if (message.operation == 'deleteItem') {
+                        handler.messageList.removeMessage(message.id, message.grouping);
+                    } else if (message.operation == 'editItemContent') {
+                        handler.messageList.editMessageContent(message.id, message.content, message.grouping);
+                    } else if (message.operation == 'editItemJira') {
+                        handler.messageList.editMessageJira(message.id, message.jiraIssue, message.grouping);
+                    } else if (message.operation == 'editItemImpediment') {
+                        handler.messageList.editMessageImpediment(message.id, message.impediment, message.grouping);
+                    } else if (message.operation == 'editItemBug') {
+                        handler.messageList.editMessageBug(message.id, message.bug, message.grouping);
+                    } else if (message.operation == 'editProblem') {
+                        handler.messageList.editProblem(message.problem, message.grouping);
+                    } else if (message.operation == 'switchParticipant') {
+                        handler.participants.switchParticipant(message.user, message.add);
+                    } else if (message.operation == 'sendMinutes') {
+                        handler.participants.minutesSent();
+                    }
+                }
+            }
+        },
+        form: {
+            toggle: function (input, icon) {
+                if (input.value == 'false') {
+                    input.value = 'true';
+                    icon.removeClass('disabled');
+                } else {
+                    input.value = 'false';
+                    icon.addClass('disabled');
+                }
+            },
+            toggleBugItem: function () {
+                var $this = $(this);
+                handler.communication.sendEditBugMessage(getItemId($this), $this.hasClass('disabled'), getGroup($this));
+            },
+            toggleImpedimentItem: function () {
+                var $this = $(this);
+                handler.communication.sendEditImpedimentMessage(getItemId($this), $this.hasClass('disabled'), getGroup($this));
+            },
+            toggleProblem: function () {
+                var $this = $(this);
+                handler.communication.sendEditProblemMessage($this.hasClass('up'), getGroup($this));
+            },
+            removeItem: function (event) {
+                var $this = $(this);
+                handler.communication.sendDeleteMessage(getItemId($this), getGroup($this));
+            },
+            editItemContent: function (value, settings) {
+                    var $this = $(this);
+                    handler.communication.sendEditContentMessage(getItemId($this), value, getGroup($this));
+                var replace = escapeHTML(value);
+                return( replace);
+            },
+            editJira: function (value, settings) {
+                    var $this = $(this);
+                    handler.communication.sendEditJiraMessage(getItemId($this), value, getGroup($this));
+                    return(value);
+            },
+            editItemSettings: {
+                type: 'textarea',
+                rows: 4,
+                width: '100%',
+                cols: 100,
+                event: 'click',
+                onblur: 'ignore',
+                data: function(value, settings) {
+                    var retval = unescapeHTML(value);
+                    return retval;
+                },
+                submit: 'OK'
+            },
+            editJiraItemSettings: {
+                type: 'text',
+                width: '120',
+                event: 'click',
+                onblur: 'ignore',
+                data: function(value, settings) {
+                    var retval = escapeHTML(value);
+                    return retval;
+                },
+                submit: 'OK'
+            }
+        },
+        messageList: {
+            addMessage: function (item, grouping) {
+                var el = $('<tr id="item_' + suffix(item.id, grouping) + '"></tr>');
+                var $tdBug = $('<td></td>');
+                var $bugItemToggle = $('<i id="bug_' + suffix(item.id, grouping) + '" class="large ' + (item.bug ? '' : 'disabled ') + 'teal bug icon bugToggle"></i>');
+                $bugItemToggle.click(handler.form.toggleBugItem);
+                $tdBug.append($bugItemToggle);
+                el.append($tdBug);
+                var $impedimentItemToggle = $('<i id="impediment_' + suffix(item.id, grouping) + '" class="large ' + (item.impediment ? '' : 'disabled ') + 'red exclamation icon impedimentToggle"></i>');
+                $impedimentItemToggle.click(handler.form.toggleImpedimentItem);
+                $tdBug.append($impedimentItemToggle);
+                el.append($tdBug);
+
+                var $tdJira = $('<td></td>');
+                var jiraIssueSpan = $('<span class="ui red horizontal label editable jiraIssue field" id="jiraIssue_' + suffix(item.id, grouping) + '"></span>');
+                if (item.jiraIssue) {
+                    jiraIssueSpan.append(document.createTextNode(item.jiraIssue));
+                }
+                $tdJira.append(jiraIssueSpan);
+                el.append($tdJira);
+                jiraIssueSpan.editable(handler.form.editJira, handler.form.editJiraItemSettings, replaceNewLine);
+
+                var $tdContent = $('<td></td>');
+                var contentSpan = $('<span class="editable itemContent field" id="content_' + suffix(item.id, grouping) + '"></span>');
+                if (item.content) {
+                    contentSpan.append(document.createTextNode(item.content));
+                }
+                $tdContent.append(contentSpan);
+                el.append($tdContent);
+                contentSpan.editable(handler.form.editItemContent, handler.form.editItemSettings, replaceNewLine);
+
+                var $tdRemove = $('<td></td>');
+                var remove = $('<a class="right floated removeItemButton" id="removeItemButton_' + suffix(item.id, grouping) + '"></a>');
+                remove.append('<input type="hidden" value="' + item.id + '"/>');
+                remove.append('<i class="large red remove sign icon" title="Remove"></i>');
+                remove.on('click', handler.form.removeItem);
+                $tdRemove.append(remove);
+                el.append($tdRemove);
+                var $messageList = $('#messages_' + grouping);
+                $messageList.append(el);
+            },
+            removeMessage: function (id, grouping) {
+                $('#item_' + suffix(id, grouping)).remove();
+            },
+            editMessageContent: function(id, newContent, grouping) {
+                $('#content_' + suffix(id, grouping)).html(newContent.replace(/\n/g, '<br/>'));
+            },
+            editMessageJira: function(id, newContent, grouping) {
+                var $span = $('#jiraIssue_' + suffix(id, grouping));
+                if (newContent) {
+                    $span.html(newContent);
+                } else {
+                    $span.html('Misc.');
+
+                }
+            },
+            editMessageBug: function(id, bug, grouping) {
+                var $span = $('#bug_' + suffix(id, grouping));
+                if (bug) {
+                    $span.removeClass('disabled');
+                } else {
+                    $span.addClass('disabled');
+                }
+            },
+            editProblem: function(problem, grouping) {
+                var $problemToggle = $('#problemToggle_' + grouping);
+                if (problem) {
+                    $problemToggle.removeClass('blue').removeClass('up').addClass('red').addClass('down');
+                } else {
+                    $problemToggle.removeClass('red').removeClass('down').addClass('blue').addClass('up');
+                }
+            },
+            editMessageImpediment: function(id, impediment, grouping) {
+                var $span = $('#impediment_' + suffix(id, grouping));
+                if (impediment) {
+                    $span.removeClass('disabled');
+                } else {
+                    $span.addClass('disabled');
+                }
+            }
+        },
+
+        participants: {
+            attending: [],
+            notAttending: [],
+            attendingSkype: [],
+
+            computeSkypeParticipants: function() {
+                handler.participants.attendingSkype = $.map(handler.participants.attending, function (val) {return val.skype;}).join(',');
+            },
+
+            showParticipant: function() {
+                $addParticipantsModal.modal('setting', 'transition', 'scale').modal('show');
+            },
+
+            attend: function(user) {
+                if (handler.participants.getAttendingUserIndex(user.id) == -1) {
+                    handler.participants.attending.push(user);
+                    var img = $('<img/>');
+                    img.addClass('ui').addClass('circular').addClass('image');
+                    img.attr('id', 'participantImage_' + user.id);
+                    img.attr('title', user.name);
+                    img.attr('src', user.imageUrl);
+                    @if(canEdit) {
+                    img.on('click', handler.participants.sendSwitchMessage);
+                    }
+                    $participants.append(img);
+                }
+                var idx = handler.participants.getNotAttendingUserIndex(user.id);
+                if (idx > -1) {
+                    handler.participants.notAttending.splice(idx, 1);
+                    $('#addParticipant_' + user.id).remove();
+                }
+                handler.participants.computeSkypeParticipants();
+            },
+
+            attendNot: function(user) {
+                if (handler.participants.getNotAttendingUserIndex(user.id) == -1) {
+                    handler.participants.notAttending.push(user);
+                    var column = $('<div></div>');
+                    column.addClass('column');
+                    column.attr('id', 'addParticipant_' + user.id);
+                    var img = $('<img/>');
+                    img.addClass('ui').addClass('avatar').addClass('image');
+                    img.attr('id', 'addParticipantImage_' + user.id);
+                    img.attr('title', user.name);
+                    img.attr('src', user.imageUrl);
+                    img.on('click', handler.participants.sendSwitchMessage);
+                    column.append(img);
+                    column.append(document.createTextNode(user.name));
+                    $addParticipants.append(column);
+                }
+                var idx = handler.participants.getAttendingUserIndex(user.id);
+                if (idx > -1) {
+                    handler.participants.attending.splice(idx, 1);
+                    $('#participantImage_' + user.id).remove();
+                }
+                handler.participants.computeSkypeParticipants();
+            },
+            getAttendingUserIndex: function(login) {
+                var transformed = $.map(handler.participants.attending, function (val) {
+                    return val.id;
+                });
+                return $.inArray(login, transformed);
+            },
+            getNotAttendingUserIndex: function(login) {
+                return $.inArray(login, $.map(handler.participants.notAttending, function(val) {return val.id;}));
+            },
+            sendSwitchMessage: function() {
+                var $this = $(this);
+                var userLogin = getParticipantId($this);
+                handler.communication.sendSwitchParticipantMessage(userLogin, handler.participants.getAttendingUserIndex(userLogin) == -1);
+            },
+            switchParticipant: function(userLogin, add) {
+                var $this = $(this);
+                if (add) {
+                    var notAttendingUserIndex = handler.participants.getNotAttendingUserIndex(userLogin);
+                    if (notAttendingUserIndex > -1) {
+                        handler.participants.attend(handler.participants.notAttending[notAttendingUserIndex]);
+                    }
+                } else {
+                    var attendingUserIndex = handler.participants.getAttendingUserIndex(userLogin);
+                    if (attendingUserIndex > -1) {
+                        handler.participants.attendNot(handler.participants.attending[attendingUserIndex]);
+                    }
+                }
+            },
+            launchSkypeCall: function() {
+                var allExceptUser =  $.grep(handler.participants.attending, function (value, index) {
+                    return value.id != '@username';
+                });
+                var all =  $.map(allExceptUser, function (val) {
+                    return val.skype;
+                }).join(';');
+                window.location = 'skype:' + all + "?call";
+            },
+            minutesSent: function() {
+                $('#minutesMessage' ).removeClass('hidden');
+            }
+        }
+    }
+
+    var user = function(login, completeName, url, skypeName) {
+        return {id: login, name: completeName, imageUrl: url, skype: skypeName};
+    };
+
+    $addItemButtons.on('click', handler.communication.sendAddItemMessage);
+    $removeItemButtons.on('click', handler.form.removeItem);
+    $jiraIssues.editable(handler.form.editJira, handler.form.editJiraItemSettings);
+    $contents.editable(handler.form.editItemContent, handler.form.editItemSettings);
+    $bugToggles.on('click', handler.form.toggleBugItem);
+    $impedimentToggles.on('click', handler.form.toggleImpedimentItem);
+    $problemToggles.on('click', handler.form.toggleProblem);
+    $addParticipantButton.accordion();
+
+    @meeting.participants.map { user => handler.participants.attend(user('@user.login', '@user.completeName', '@routes.Assets.at("images/avatar/" + user.login + ".jpg")', '@user.skype'));
+    }
+
+    @User.findAll.filterNot(meeting.participants.contains(_)).map { user => handler.participants.attendNot(user('@user.login', '@user.completeName', '@routes.Assets.at("images/avatar/" + user.login + ".jpg")', '@user.skype'));
+    }
+    $skype.on('click', handler.participants.launchSkypeCall);
+    $email.on('click', handler.communication.sendMinutes);
+    chatSocket.onmessage = handler.communication.receiveEvent;
+});
+</script>

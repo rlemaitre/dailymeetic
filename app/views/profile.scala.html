@@ -1,0 +1,133 @@
+@(teams: Seq[Team], user: User, userForm: Form[(String, String, String, String, String, Boolean)], passwordForm: Form[(String, String, String)])
+
+@import helper._
+@import views.html.helpers._
+
+@main(teams, user) {
+    @helper.form(action = routes.Users.submit(userForm("login").value.getOrElse(""))) {
+        <div class="ui fluid form segment">
+            <div class="ui blue ribbon label">
+                <img src="@routes.Assets.at("images/avatar/" + user.login + ".png")" class="ui avatar image">
+                @userForm("login").value's profile
+                @formInputHidden(
+                    userForm("login"),
+                    '_error -> userForm.error("login")
+                )
+            </div>
+            @if(userForm.hasErrors) {
+                <div class="ui error message">
+                    <div class="header">Error</div>
+                    <p>Please fix all errors</p>
+                </div>
+            }
+
+            <div class="ui vertical grid">
+                <div class="one column row">
+                    <div class="column">
+                    </div>
+                </div>
+                <div class="two column row">
+                    <div class="column">
+                    @formInputText(
+                        userForm("firstName"),
+                        '_showConstraints -> false,
+                        '_showErrors -> true,
+                        '_error -> userForm.error("firstName"),
+                        '_label -> "First name",
+                        '_class -> "ui field"
+                    )
+                    </div>
+                    <div class="column">
+                    @formInputText(
+                        userForm("lastName"),
+                        '_showConstraints -> false,
+                        '_showErrors -> true,
+                        '_error -> userForm.error("lastName"),
+                        '_label -> "Last name",
+                        '_class -> "ui field"
+                    )
+                    </div>
+                </div>
+                <div class="two column row">
+                    <div class="column">
+                    @formInputText(
+                        userForm("email"),
+                        '_label -> "e-mail",
+                        '_showConstraints -> false,
+                        '_showErrors -> true,
+                        '_error -> userForm.error("email"),
+                        '_class -> "ui field"
+                    )
+                    </div>
+                    <div class="column">
+                    @formInputText(
+                        userForm("skype"),
+                        '_showConstraints -> false,
+                        '_showErrors -> true,
+                        '_error -> userForm.error("skype"),
+                        '_label -> "Skype user name",
+                        '_class -> "ui field"
+                    )
+                    </div>
+                </div>
+
+                <div class="two column row">
+                    <div class="column">
+                    @formCheckbox(
+                        userForm("transverse"),
+                        '_showConstraints -> false,
+                        '_showErrors -> true,
+                        '_error -> userForm.error("transverse"),
+                        '_label -> "Transverse",
+                        '_class -> "ui checkbox"
+                    )
+                    </div>
+                    <div class="column">
+                    @formInputText(
+                        userForm("role"),
+                        '_showConstraints -> false,
+                        '_showErrors -> true,
+                        '_error -> userForm.error("role"),
+                        '_label -> "Role",
+                        '_class -> "ui field"
+                    )
+                    </div>
+                </div>
+                <div class="one column row">
+                    <div class="column">
+                        <div class="actions">
+                            <input type="submit" value="Saves changes" class="ui green right submit button"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+</div>
+
+    <div class="ui segment form">
+        <div class="ui blue ribbon label">Change password</div>
+        @if(passwordForm.hasGlobalErrors) {
+            <div class="ui error message">
+                <div class="header">Error</div>
+                <p>Please fix all errors</p>
+            </div>
+        }
+        @helper.form(action = routes.Users.changePassword(userForm("login").value.getOrElse(""))) {
+            <div class="ui field">
+                <label for="old_password">Old password</label>
+                <input type="password" id="old_password" name="old_password"/>
+            </div>
+            <div class="ui field">
+                <label for="password">New password</label>
+                <input type="password" id="password" name="password"/>
+            </div>
+            <div class="ui field">
+                <label for="password_conf">Confirm password</label>
+                <input type="password" id="password_conf" name="password_conf"/>
+            </div>
+            <div class="actions">
+                <input type="submit" value="Change password" class="ui green right submit button"/>
+            </div>
+        }
+    </div>
+}

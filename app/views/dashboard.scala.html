@@ -1,0 +1,11 @@
+@(userTeams: Seq[Team], user: User)
+
+
+@main(userTeams, user) {
+    <div class="ui one column page grid">
+    @userTeams.map { team => @views.html.teams.summary(team, true)}
+    </div>
+    <div class="ui two column page grid">
+    @Team.findAll.filter( t => !userTeams.contains(t)).map { otherTeam => @views.html.teams.summary(otherTeam)}
+    </div>
+}

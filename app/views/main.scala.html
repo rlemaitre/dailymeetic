@@ -1,0 +1,41 @@
+@(userTeams: Seq[Team], user: User)(body: Html)
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Daily Meetic</title>
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+
+        <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/semantic.min.css")">
+        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+
+        <script src="@routes.Assets.at("javascripts/jquery.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("javascripts/semantic.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("javascripts/daily.js")" type="text/javascript"></script>
+    </head>
+    <body class="label" id="daily">
+        <div class="ui fixed teal vertical demo sidebar menu" id="menu">
+            <div class="title item">
+                <img src="@routes.Assets.at("images/logo-square.png")"/>
+            </div>
+            <a class="active item" href="@routes.Teams.index">
+                <i class="home icon"></i>
+                Dashboard
+            </a>
+            @Team.findAll.map { team =>
+                <a class="item" href="@routes.Teams.details(team.name)"><i class="users @if(userTeams.contains(team)) { teal }icon"></i>@team.name</a>
+            }
+            <div class="bottom right title item">
+                <a href="@routes.Users.profile(user.login)"><i class="large user icon" title="@user.firstName @user.lastName"></i></a>
+                <a href="@routes.Application.logout()"><i class="large sign out icon" title="Logout"></i></a>
+            </div>
+        </div>
+        <div class="ui blue huge launch right attached button">
+            <i class="icon list layout"></i>
+            <span class="text"></span>
+        </div>
+        <div class="segment" id="main">
+        @body
+        </div>
+    </body>
+</html>

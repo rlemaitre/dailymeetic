@@ -1,0 +1,30 @@
+@(teams: Seq[Team], user: User, meeting: Meeting)(implicit r: RequestHeader)
+@getTeam(groupName: String) = @{
+    Team.findByName(groupName)
+}@hasProblem(groupName: String) = @{
+    getTeam(groupName).get.meeting(meeting.date).getOrElse(Meeting.empty).problem.getOrElse(false)
+}@impediments = @{
+    meeting.items.filter(_.impediment)
+}@misc = @{
+    meeting.items.filter(!_.impediment)
+}@title(topic: String) = @{
+    if(topic.forall(_.isDigit))
+        "{jira:PMDATNDPF-" + topic + "}"
+    else if(topic.startsWith("PMDATNDPF-"))
+        "{jira:" + topic + "}"
+    else
+        "*" + topic + "*"
+}
+@if(!impediments.isEmpty) {
+h3. (!) Impediments/Questions:
+@for(impediment <- impediments) {
+* @impediment.jiraIssue.map(issue => title(issue)).getOrElse("") \\
+@impediment.content.getOrElse("").replace("\n", " \\\\ ")
+}}
+@if(!misc.isEmpty) {
+h3. Misc:
+@for(item <- misc) {
+* @item.jiraIssue.map(issue => title(issue)).getOrElse("") \\
+@item.content.getOrElse("").replace("\n", " \\\\ ")
+}}
+

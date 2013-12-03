@@ -1,0 +1,35 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+
+# The home page
+GET         /                                           controllers.Teams.index
+
+# Authentication
+GET         /login                                      controllers.Application.login
+POST        /login                                      controllers.Application.authenticate
+GET         /logout                                     controllers.Application.logout
+
+# Teams
+POST        /teams                                      controllers.Teams.add
+
+GET         /teams/:team                                controllers.Teams.details(team: String)
+GET         /teams/:team/settings                       controllers.Teams.settings(team: String)
+POST        /teams/:team/settings                       controllers.Teams.changeSettings(team: String)
+
+# Meetings
+GET         /teams/:team/meetings/:date                 controllers.Meetings.details(team: String, date: String)
+GET         /teams/:team/meetings/:date/txt             controllers.Meetings.detailsTxt(team: String, date: String)
+GET         /teams/:team/meetings/:date/confluence      controllers.Meetings.detailsConfluence(team: String, date: String)
+GET         /:team/meetings/:date                       controllers.Meetings.steering(team: String, date: String)
+GET         /:team/meetings/:date/txt                   controllers.Meetings.steeringTxt(team: String, date: String)
+GET         /teams/:team/meetings/:date/room/:user      controllers.Meetings.meetingRoom(user:String, team: String, date: String)
+
+# Users
+GET         /users/:login/user                          controllers.Users.profile(login: String)
+POST        /users/:login/user                          controllers.Users.submit(login:String)
+POST        /users/:login/password                      controllers.Users.changePassword(login:String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file                               controllers.Assets.at(path="/public", file)

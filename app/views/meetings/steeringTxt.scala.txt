@@ -1,0 +1,12 @@
+@(teams: Seq[Team], user: User, meeting: Meeting)(implicit r: RequestHeader)
+@import commons.DateHelper._
+@getTeam(groupName: String) = @{
+    Team.findByName(groupName)
+}@hasProblem(groupName: String) = @{
+    getTeam(groupName).get.meeting(meeting.date).getOrElse(Meeting.empty).problem.getOrElse(false)
+}
+@meeting.teamName - @readableDate(meeting.date)
+@for(group <- meeting.team.groups) {
+****** @group ****** @if(getTeam(group).isDefined) {@if(hasProblem(group)) {(n)} else {(y)}}@for(item <- meeting.itemsByGroup.get(group).getOrElse(Seq())) {
+ - @if(item.bug) {(bug) }@if(item.impediment) {!!!}@item.jiraIssue.getOrElse("") : @item.content.getOrElse("").replaceAll("\n", "\n    ")}
+}

@@ -1,0 +1,106 @@
+@(teams: Seq[Team], user: User, meeting: Meeting)(implicit r: RequestHeader)
+
+    @import commons.DateHelper._
+
+    @suffix(groupName: String, item: MeetingItem) = @{
+        groupName + "_" + item.id.get
+    }
+    @getTeam(groupName: String) = @{
+        Team.findByName(groupName)
+    }
+    @hasProblem(groupName: String) = @{
+        getTeam(groupName).get.meeting(meeting.date).getOrElse(Meeting.empty).problem.getOrElse(false)
+    }
+    @canEdit = @{ meeting.participants.contains(user) }
+
+    @main(teams, user) {
+        <div class="ui segment">
+            <div class="ui huge blue ribbon label"><i class="users icon"></i>@meeting.teamName
+                - @readableDate(meeting.date)</div>
+            <div class="ui right floated header">
+                <a id="skype">
+                    <i class="huge blue skype icon" title="Launch Skype call"></i>
+                </a>
+            </div>
+            <div class="ui right floated header">
+                <a id="email">
+                    <img src="@routes.Assets.at("images/mail.png")" title="Send minutes to everybody"/>
+                </a>
+            </div>
+            <div class="ui items">
+                <div class="ui small images" id="participants">
+                </div>
+            </div>
+            @if(canEdit) {
+            <div class="ui basic accordion" id="addParticipantButton">
+                <div class="title">
+                    <i class="icon dropdown"></i>
+                    Add participants
+                </div>
+                <div class="ui two column floating grid content" id="addParticipants">
+                </div>
+            </div>
+            }
+        </div>
+        <div class="ui hidden success message" id="minutesMessage">
+            <div class="header">
+                Steering daily meeting's minutes are sent to everybody!
+            </div>
+        </div>
+        @for(group <- meeting.team.groups) {
+            <div class="ui segment">
+                <div class="ui huge ribbon label">
+                    @if(getTeam(group).isDefined) {
+                        @if(hasProblem(group)) {
+                            <i class="floating ui large red thumbs down outline icon @if(canEdit) {problemToggle}" id="problemToggle_@group"></i>
+                        } else {
+                            <i class="floating ui large blue thumbs up outline icon @if(canEdit) {problemToggle}" id="problemToggle_@group"></i>
+                        }
+                    } else {
+                        <i class="floating ui large blue empty star icon"></i>
+                    }
+                    @group
+                </div>
+                <table class="ui padded table" id="messages_@group">
+                    <tbody>
+                    @for(item <- meeting.itemsByGroup.get(group).getOrElse(Seq())) {
+                        <tr id="item_@suffix(group, item)">
+                            <td class="one wide">
+                            @if(item.bug) {
+                                <i id="bug_@suffix(group, item)" class="large teal bug icon @if(canEdit) {bugToggle}" title="Bug"></i>
+                            } else {
+                                <i id="bug_@suffix(group, item)" class="large disabled teal bug icon @if(canEdit) {bugToggle}"></i>
+                            }
+                            @if(item.impediment) {
+                                <i id="impediment_@suffix(group, item)" class="large red exclamation icon @if(canEdit) {impedimentToggle}" title="Impediment"></i>
+                            } else {
+                                <i id="impediment_@suffix(group, item)" class="large disabled red exclamation icon @if(canEdit) {impedimentToggle}"></i>
+                            }
+                            </td>
+                            <td class="one wide" valign="true">
+                                <span class="ui @if(canEdit) {editable jiraIssue} red horizontal label field" id="jiraIssue_@suffix(group, item)">@Html(item.jiraIssue.getOrElse(""))</span>
+                            </td>
+                            <td class="thirteen wide">
+                                <div class="@if(canEdit) {editable itemContent} field" id="content_@suffix(group, item)">@Html(item.content.getOrElse("").replace("\n", "<br/>"))</div>
+                            </td>
+                            @if(canEdit) {
+                            <td class="one wide">
+                                <a class="right floated removeItemButton" id="removeItemButton_@suffix(group, item)">
+                                    <i class="large red remove sign icon" title="Remove"></i>
+                                </a>
+                            </td>
+                            }
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+                @if(canEdit) {
+                <div class="item">
+                    <a id="addItemButton_@group" class="right floated red tiny ui button addItemButton">Add</a>
+                </div>
+                }
+            </div>
+        }
+        <script type="text/javascript" charset="utf-8" src="@routes.Assets.at("javascripts/jquery.jeditable.js")"></script>
+        @views.html.meetings.meetingroomjs(user.login, meeting.teamName, forUrl(meeting.date), meeting)
+    }
